@@ -16,7 +16,8 @@ export class Cachable<T> {
     constructor(
         key: string,
         maxCacheAgeMs: number = 1000*60*60,
-        debug: boolean = false
+        debug: boolean = false,
+        defaultValue?: T
     ) {
         this.key = key
         this.maxCacheAgeMs = maxCacheAgeMs
@@ -25,7 +26,16 @@ export class Cachable<T> {
         this.localStorageSupported = this.localStorage != null
 
         if (debug) console.log(`Local storage supported: ${this.localStorageSupported}`)
-        if (!this.load() && debug) console.log(`Could not load value for key '${key}' on init`)
+
+        if (!this.load()) {
+            if (debug) console.log(`Could not load value for key '${key}' on init`)
+
+            if (defaultValue) {
+                if (debug) console.log(`Setting default value for key '${key}'`)
+
+                this.set(defaultValue)
+            }
+        }
     }
 
 
@@ -49,7 +59,7 @@ export class Cachable<T> {
 
     /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
 
-    save(value: T) {
+    set(value: T) {
         this.cache = {
             lastSaveMs: Date.now(),
             value: value
