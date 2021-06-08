@@ -16,8 +16,8 @@ export class Cachable<T> {
     constructor(
         key: string,
         maxCacheAgeMs: number = 1000*60*60,
-        debug: boolean = false,
-        defaultValue?: T
+        defaultValue?: T,
+        debug: boolean = false
     ) {
         this.key = key
         this.maxCacheAgeMs = maxCacheAgeMs
