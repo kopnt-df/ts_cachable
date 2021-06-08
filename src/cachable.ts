@@ -23,7 +23,7 @@ export class Cachable<T> {
         this.maxCacheAgeMs = maxCacheAgeMs
         this.debug = debug
 
-        this.localStorageSupported = this.localStorage != null
+        this.localStorageSupported = this.localStorageExists && this.localStorage != null
 
         if (debug) console.log(`Local storage supported: ${this.localStorageSupported}`)
 
@@ -54,7 +54,8 @@ export class Cachable<T> {
 
     private cache: CachedItem<T>
 
-    private get localStorage(): Storage { return window['localStorage'] }
+    private get localStorageExists(): boolean { return window != undefined }
+    private get localStorage(): Storage { return this.localStorageExists ? window['localStorage'] : undefined }
 
 
     /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
