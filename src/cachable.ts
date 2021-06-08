@@ -77,7 +77,7 @@ export class Cachable<T> {
         if (this.cache != null) {
             const cacheAgeMs = Date.now() - this.cache.lastSaveMs
 
-            if (cacheAgeMs <= this.maxCacheAgeMs) {
+            if (this.maxCacheAgeMs != null && cacheAgeMs <= this.maxCacheAgeMs) {
                 return this.cache.value
             }
 
