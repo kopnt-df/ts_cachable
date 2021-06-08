@@ -16,14 +16,16 @@ export class Cachable<T> {
     constructor(
         key: string,
         maxCacheAgeMs: number = 1000*60*60,
-        defaultValue?: T,
-        unsetCallback?: UnsetCallback,
+        defaultValue?: T | null,
+        unsetCallback?: UnsetCallback | null,
         debug: boolean = false
     ) {
         this.key = key
         this.maxCacheAgeMs = maxCacheAgeMs
         this.unsetCallback = unsetCallback
         this.debug = debug
+
+        this.cache = null
 
         this.localStorageSupported = this.localStorageExists && this.localStorage != null
 
@@ -87,17 +89,15 @@ export class Cachable<T> {
     /* ---------------------------------------------------- Private methods --------------------------------------------------- */
 
     private unsetIfNeeded(): boolean {
-        if (this.maxCacheAgeMs != null && this.cache) {
-            if (this.maxCacheAgeMs != null) {
-                const cacheAgeMs = Date.now() - this.cache.lastSaveMs
+        if (this.cache && this.maxCacheAgeMs != null) {
+            const cacheAgeMs = Date.now() - this.cache.lastSaveMs
 
-                if (cacheAgeMs > this.maxCacheAgeMs) {
-                    if (this.debug) console.log(`Removing value for key '${this.key}' (Reason: too old (Age ms: '${cacheAgeMs}' > Age ms: '${this.maxCacheAgeMs}))`)
+            if (cacheAgeMs > this.maxCacheAgeMs) {
+                if (this.debug) console.log(`Removing value for key '${this.key}' (Reason: too old (Age ms: '${cacheAgeMs}' > Age ms: '${this.maxCacheAgeMs}))`)
 
-                    if (this.unsetCallback) this.unsetCallback(this.key)
+                if (this.unsetCallback) this.unsetCallback(this.key)
 
-                    return true
-                }
+                return true
             }
         }
 
