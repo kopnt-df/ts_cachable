@@ -54,7 +54,7 @@ export class Cachable<T> {
 
     private cache: CachedItem<T>
 
-    private get localStorageExists(): boolean { return window != undefined }
+    private get localStorageExists(): boolean { return typeof window !== 'undefined' }
     private get localStorage(): Storage { return this.localStorageExists ? window['localStorage'] : undefined }
 
 
