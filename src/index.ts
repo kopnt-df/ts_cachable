@@ -1,0 +1,1 @@
+export { Cachable } from './cachable'
