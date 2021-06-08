@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------ Imports ----------------------------------------------------------- */
 
 // Local
-import { CachedItem } from './cachedItem'
+import { CachedItem, UnsetCallback } from './types'
 
 /* -------------------------------------------------------------------------------------------------------------------------------- */
 
@@ -17,24 +17,31 @@ export class Cachable<T> {
         key: string,
         maxCacheAgeMs: number = 1000*60*60,
         defaultValue?: T,
+        unsetCallback?: UnsetCallback,
         debug: boolean = false
     ) {
         this.key = key
         this.maxCacheAgeMs = maxCacheAgeMs
+        this.unsetCallback = unsetCallback
         this.debug = debug
 
         this.localStorageSupported = this.localStorageExists && this.localStorage != null
 
         if (debug) console.log(`Local storage supported: ${this.localStorageSupported}`)
+        var hasValue = true
 
         if (!this.load()) {
+            hasValue = false
+
             if (debug) console.log(`Could not load value for key '${key}' on init`)
+        } else if (this.unsetIfNeeded()) {
+            hasValue = false
+        }
 
-            if (defaultValue) {
-                if (debug) console.log(`Setting default value for key '${key}'`)
+        if (!hasValue && defaultValue) {
+            if (debug) console.log(`Setting default value for key '${key}'`)
 
-                this.set(defaultValue)
-            }
+            this.set(defaultValue)
         }
     }
 
@@ -46,6 +53,7 @@ export class Cachable<T> {
 
     maxCacheAgeMs: number
     debug: boolean
+    unsetCallback?: UnsetCallback
 
     get value() { return this.get() }
 
@@ -73,23 +81,28 @@ export class Cachable<T> {
         }
     }
 
-    get(): T | null {
-        if (this.cache != null) {
-            const cacheAgeMs = Date.now() - this.cache.lastSaveMs
-
-            if (this.maxCacheAgeMs != null && cacheAgeMs <= this.maxCacheAgeMs) {
-                return this.cache.value
-            }
-
-            this.localStorage.removeItem(this.key)
-            if (this.debug) console.log(`Removing value for key '${this.key}' (Reason: too old (Age ms: '${cacheAgeMs}' > Age ms: '${this.maxCacheAgeMs}))`)
-        }
-
-        return null
-    }
+    get(): T | null { return this.cache != null && !this.unsetIfNeeded() ? this.cache.value : null }
 
 
     /* ---------------------------------------------------- Private methods --------------------------------------------------- */
+
+    private unsetIfNeeded(): boolean {
+        if (this.maxCacheAgeMs != null && this.cache) {
+            if (this.maxCacheAgeMs != null) {
+                const cacheAgeMs = Date.now() - this.cache.lastSaveMs
+
+                if (cacheAgeMs > this.maxCacheAgeMs) {
+                    if (this.debug) console.log(`Removing value for key '${this.key}' (Reason: too old (Age ms: '${cacheAgeMs}' > Age ms: '${this.maxCacheAgeMs}))`)
+
+                    if (this.unsetCallback) this.unsetCallback(this.key)
+
+                    return true
+                }
+            }
+        }
+
+        return false
+    }
 
     private load (): boolean {
         if (this.localStorageSupported) {
