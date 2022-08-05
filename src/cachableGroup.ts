@@ -26,7 +26,7 @@ export class CachableGroup<T> {
 
     this.items = {}
 
-    this.groupItemsKeys.value.forEach(itemKey => {
+    this.groupItemsKeys.value!.forEach(itemKey => {
       this.items[itemKey] = new Cachable<T>(itemKey, maxCacheAgeMs, null, this.didUnset, this.debug)
     })
   }
@@ -68,20 +68,20 @@ export class CachableGroup<T> {
 
     const itemCacheKey = this.itemCacheKey(key)
 
-    if (this.groupItemsKeys.value.has(itemCacheKey)) {
+    if (this.groupItemsKeys.value!.has(itemCacheKey)) {
       this.items[itemCacheKey].set(value)
     } else {
-      this.items[itemCacheKey] = new Cachable(itemCacheKey, this.maxCacheAgeMs, null, this.didUnset, this.debug)
-      this.groupItemsKeys.value.add(itemCacheKey)
-      this.groupItemsKeys.set(this.groupItemsKeys.value)
+      this.items[itemCacheKey] = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, null, this.didUnset, this.debug)
+      this.groupItemsKeys.value!.add(itemCacheKey)
+      this.groupItemsKeys.set(this.groupItemsKeys.value!)
     }
   }
 
   deleteItem(key: string) {
     const itemCacheKey = this.itemCacheKey(key)
 
-    if (this.groupItemsKeys.value.delete(itemCacheKey)) {
-      this.groupItemsKeys.set(this.groupItemsKeys.value)
+    if (this.groupItemsKeys.value!.delete(itemCacheKey)) {
+      this.groupItemsKeys.set(this.groupItemsKeys.value!)
       delete this.items[itemCacheKey]
     }
   }
@@ -94,8 +94,8 @@ export class CachableGroup<T> {
   }
 
   private didUnset(itemCacheKey: string) {
-    this.groupItemsKeys.value.delete(itemCacheKey)
-    this.groupItemsKeys.set(this.groupItemsKeys.value)
+    this.groupItemsKeys.value!.delete(itemCacheKey)
+    this.groupItemsKeys.set(this.groupItemsKeys.value!)
 
     delete this.items[itemCacheKey]
   }

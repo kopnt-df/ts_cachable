@@ -15,9 +15,9 @@ export class Cachable<T> {
 
   constructor(
     key: string,
-    maxCacheAgeMs: number = 1000*60*60,
-    defaultValue?: T | null,
-    unsetCallback?: UnsetCallback | null,
+    maxCacheAgeMs: number | null = 1000*60*60,
+    defaultValue?: T,
+    unsetCallback?: UnsetCallback,
     debug: boolean = false
   ) {
     this.key = key
@@ -25,8 +25,8 @@ export class Cachable<T> {
     this.unsetCallback = unsetCallback
     this.debug = debug
 
-    this.cache = null
-
+    this.localStorageExists = typeof window !== 'undefined'
+    this.localStorage = this.localStorageExists ? window.localStorage : null
     this.localStorageSupported = this.localStorageExists && this.localStorage != null
 
     if (debug) console.log(`Local storage supported: ${this.localStorageSupported}`)
@@ -40,14 +40,11 @@ export class Cachable<T> {
       hasValue = false
     }
 
-    if (!hasValue && defaultValue) {
+    if (!hasValue && defaultValue !== undefined) {
       if (debug) console.log(`Setting default value for key '${key}'`)
 
       this.set(defaultValue)
     }
-
-    console.log('hasValue', hasValue)
-    console.log('this.cache', this.cache)
   }
 
 
@@ -56,7 +53,7 @@ export class Cachable<T> {
   readonly localStorageSupported: boolean
   readonly key: string
 
-  maxCacheAgeMs: number
+  maxCacheAgeMs: number | null
   debug: boolean
   unsetCallback?: UnsetCallback
 
@@ -65,25 +62,32 @@ export class Cachable<T> {
 
   /* -------------------------------------------------- Private properties -------------------------------------------------- */
 
-  private cache: CachedItem<T>
+  private cache?: CachedItem<T>
 
-  private get localStorageExists(): boolean { return typeof window !== 'undefined' }
-  private get localStorage(): Storage { return this.localStorageExists ? window['localStorage'] : undefined }
+  private localStorageExists: boolean
+  private localStorage: Storage | null
+
+  // private get localStorageExists(): boolean { return typeof window !== 'undefined' }
+  // private get localStorage(): Storage | undefined { return this.localStorageExists ? window.localStorage : undefined }
 
 
   /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
 
-  set(value: T) {
+  set(value: T): boolean {
     this.cache = {
       lastSaveMs: Date.now(),
       value: value
     }
 
-    if (this.localStorageSupported) {
+    if (this.localStorage !== null) {
       if (this.debug) console.log(`Saving value for key '${this.key}'`)
 
       this.localStorage.setItem(this.key, JSON.stringify(value))
+
+      return true
     }
+
+    return false
   }
 
   get(): T | null { return this.cache != null && !this.unsetIfNeeded() ? this.cache.value : null }
@@ -98,7 +102,7 @@ export class Cachable<T> {
       if (cacheAgeMs > this.maxCacheAgeMs) {
         if (this.debug) console.log(`Removing value for key '${this.key}' (Reason: too old (Age ms: '${cacheAgeMs}' > Age ms: '${this.maxCacheAgeMs}))`)
 
-        if (this.unsetCallback) this.unsetCallback(this.key)
+        if (this.unsetCallback !== undefined) this.unsetCallback(this.key)
 
         return true
       }
@@ -108,10 +112,14 @@ export class Cachable<T> {
   }
 
   private load (): boolean {
-    if (this.localStorageSupported) {
-      this.cache = JSON.parse(window['localStorage'].getItem(this.key))
+    if (this.localStorage != null) {
+      let cacheStr = this.localStorage.getItem(this.key)
 
-      return true
+      if (typeof cacheStr === 'string') {
+        this.cache = JSON.parse(cacheStr)
+
+        return true
+      }
     }
 
     return false
