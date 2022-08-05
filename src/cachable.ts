@@ -45,6 +45,9 @@ export class Cachable<T> {
 
       this.set(defaultValue)
     }
+
+    console.log('hasValue', hasValue)
+    console.log('this.cache', this.cache)
   }
 
 
