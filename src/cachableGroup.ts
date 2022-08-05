@@ -53,7 +53,7 @@ export class CachableGroup<T> {
   getItem(key: string): T | null {
     const itemCache = this.items[this.itemCacheKey(key)]
 
-    return itemCache !== undefined ? itemCache.value : null
+    return itemCache !== undefined && itemCache !== null ? itemCache.value : null
   }
 
   setItem(
