@@ -22,12 +22,11 @@ export class CachableGroup<T> {
     this.maxCacheAgeMs = maxCacheAgeMs
     this.debug = debug
 
-    this.groupItemsKeys = new Cachable(groupKey, null, new Set<string>(), null, debug)
-
+    this.groupItemsKeys = new Cachable(groupKey, null, new Set<string>(), undefined, true)
     this.items = {}
 
     this.groupItemsKeys.value!.forEach(itemKey => {
-      this.items[itemKey] = new Cachable<T>(itemKey, maxCacheAgeMs, null, this.didUnset, this.debug)
+      this.items[itemKey] = new Cachable<T>(itemKey, maxCacheAgeMs, undefined, this.didUnset, debug)
     })
   }
 
@@ -50,10 +49,10 @@ export class CachableGroup<T> {
 
   /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
 
-  getItem(key: string): T | null {
+  getItem(key: string): T | undefined {
     const itemCache = this.items[this.itemCacheKey(key)]
 
-    return itemCache !== undefined && itemCache !== null ? itemCache.value : null
+    return itemCache !== undefined && itemCache.value !== undefined ? itemCache.value : undefined
   }
 
   setItem(
@@ -71,7 +70,7 @@ export class CachableGroup<T> {
     if (this.groupItemsKeys.value!.has(itemCacheKey)) {
       this.items[itemCacheKey].set(value)
     } else {
-      this.items[itemCacheKey] = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, null, this.didUnset, this.debug)
+      this.items[itemCacheKey] = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this.didUnset, this.debug)
       this.groupItemsKeys.value!.add(itemCacheKey)
       this.groupItemsKeys.set(this.groupItemsKeys.value!)
     }
