@@ -11,107 +11,106 @@ import { CachedItem, UnsetCallback } from './types'
 
 export class Cachable<T> {
 
-    /* ------------------------------------------------------ Constructor ----------------------------------------------------- */
+  /* ------------------------------------------------------ Constructor ----------------------------------------------------- */
 
-    constructor(
-        key: string,
-        maxCacheAgeMs: number = 1000*60*60,
-        defaultValue?: T | null,
-        unsetCallback?: UnsetCallback | null,
-        debug: boolean = false
-    ) {
-        this.key = key
-        this.maxCacheAgeMs = maxCacheAgeMs
-        this.unsetCallback = unsetCallback
-        this.debug = debug
+  constructor(
+    key: string,
+    maxCacheAgeMs: number = 1000*60*60,
+    defaultValue?: T | null,
+    unsetCallback?: UnsetCallback | null,
+    debug: boolean = false
+  ) {
+    this.key = key
+    this.maxCacheAgeMs = maxCacheAgeMs
+    this.unsetCallback = unsetCallback
+    this.debug = debug
 
-        this.cache = null
+    this.cache = null
 
-        this.localStorageSupported = this.localStorageExists && this.localStorage != null
+    this.localStorageSupported = this.localStorageExists && this.localStorage != null
 
-        if (debug) console.log(`Local storage supported: ${this.localStorageSupported}`)
-        var hasValue = true
+    if (debug) console.log(`Local storage supported: ${this.localStorageSupported}`)
+    var hasValue = true
 
-        if (!this.load()) {
-            hasValue = false
+    if (!this.load()) {
+      hasValue = false
 
-            if (debug) console.log(`Could not load value for key '${key}' on init`)
-        } else if (this.unsetIfNeeded()) {
-            hasValue = false
-        }
-
-        if (!hasValue && defaultValue) {
-            if (debug) console.log(`Setting default value for key '${key}'`)
-
-            this.set(defaultValue)
-        }
+      if (debug) console.log(`Could not load value for key '${key}' on init`)
+    } else if (this.unsetIfNeeded()) {
+      hasValue = false
     }
 
+    if (!hasValue && defaultValue) {
+      if (debug) console.log(`Setting default value for key '${key}'`)
 
-    /* --------------------------------------------------- Public properties -------------------------------------------------- */
-
-    readonly localStorageSupported: boolean
-    readonly key: string
-
-    maxCacheAgeMs: number
-    debug: boolean
-    unsetCallback?: UnsetCallback
-
-    get value() { return this.get() }
+      this.set(defaultValue)
+    }
+  }
 
 
-    /* -------------------------------------------------- Private properties -------------------------------------------------- */
+  /* --------------------------------------------------- Public properties -------------------------------------------------- */
 
-    private cache: CachedItem<T>
+  readonly localStorageSupported: boolean
+  readonly key: string
 
-    private get localStorageExists(): boolean { return typeof window !== 'undefined' }
-    private get localStorage(): Storage { return this.localStorageExists ? window['localStorage'] : undefined }
+  maxCacheAgeMs: number
+  debug: boolean
+  unsetCallback?: UnsetCallback
+
+  get value() { return this.get() }
 
 
-    /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
+  /* -------------------------------------------------- Private properties -------------------------------------------------- */
 
-    set(value: T) {
-        this.cache = {
-            lastSaveMs: Date.now(),
-            value: value
-        }
+  private cache: CachedItem<T>
 
-        if (this.localStorageSupported) {
-            if (this.debug) console.log(`Saving value for key '${this.key}'`)
+  private get localStorageExists(): boolean { return typeof window !== 'undefined' }
+  private get localStorage(): Storage { return this.localStorageExists ? window['localStorage'] : undefined }
 
-            this.localStorage.setItem(this.key, JSON.stringify(value))
-        }
+
+  /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
+
+  set(value: T) {
+    this.cache = {
+      lastSaveMs: Date.now(),
+      value: value
     }
 
-    get(): T | null { return this.cache != null && !this.unsetIfNeeded() ? this.cache.value : null }
+    if (this.localStorageSupported) {
+      if (this.debug) console.log(`Saving value for key '${this.key}'`)
+
+      this.localStorage.setItem(this.key, JSON.stringify(value))
+    }
+  }
+
+  get(): T | null { return this.cache != null && !this.unsetIfNeeded() ? this.cache.value : null }
 
 
-    /* ---------------------------------------------------- Private methods --------------------------------------------------- */
+  /* ---------------------------------------------------- Private methods --------------------------------------------------- */
 
-    private unsetIfNeeded(): boolean {
-        if (this.cache && this.maxCacheAgeMs != null) {
-            const cacheAgeMs = Date.now() - this.cache.lastSaveMs
+  private unsetIfNeeded(): boolean {
+    if (this.cache && this.maxCacheAgeMs != null) {
+      const cacheAgeMs = Date.now() - this.cache.lastSaveMs
 
-            if (cacheAgeMs > this.maxCacheAgeMs) {
-                if (this.debug) console.log(`Removing value for key '${this.key}' (Reason: too old (Age ms: '${cacheAgeMs}' > Age ms: '${this.maxCacheAgeMs}))`)
+      if (cacheAgeMs > this.maxCacheAgeMs) {
+        if (this.debug) console.log(`Removing value for key '${this.key}' (Reason: too old (Age ms: '${cacheAgeMs}' > Age ms: '${this.maxCacheAgeMs}))`)
 
-                if (this.unsetCallback) this.unsetCallback(this.key)
+        if (this.unsetCallback) this.unsetCallback(this.key)
 
-                return true
-            }
-        }
-
-        return false
+        return true
+      }
     }
 
-    private load (): boolean {
-        if (this.localStorageSupported) {
-            this.cache = JSON.parse(window['localStorage'].getItem(this.key))
+    return false
+  }
 
-            return true
-        }
+  private load (): boolean {
+    if (this.localStorageSupported) {
+      this.cache = JSON.parse(window['localStorage'].getItem(this.key))
 
-        return false
+      return true
     }
 
+    return false
+  }
 }
