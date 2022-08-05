@@ -58,8 +58,14 @@ export class CachableGroup<T> {
 
   setItem(
     key: string,
-    value: T
+    value: T | null 
   ) {
+    if (value === null) {
+      this.deleteItem(key)
+
+      return
+    }
+
     const itemCacheKey = this.itemCacheKey(key)
 
     if (this.groupItemsKeys.value.has(itemCacheKey)) {
