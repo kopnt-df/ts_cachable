@@ -26,9 +26,9 @@ export class CachableGroup<T> {
 
     this.items = {}
 
-    for (const itemKey of this.groupItemsKeys.value) {
+    this.groupItemsKeys.value.forEach(itemKey => {
       this.items[itemKey] = new Cachable<T>(itemKey, maxCacheAgeMs, null, this.didUnset, this.debug)
-    }
+    })
   }
 
 
