@@ -2,6 +2,7 @@
 
 // Local
 import { Cachable } from './cachable'
+import { CachedItem } from './types'
 
 /* -------------------------------------------------------------------------------------------------------------------------------- */
 
@@ -22,8 +23,33 @@ export class CachableGroup<T> {
     this.maxCacheAgeMs = maxCacheAgeMs
     this.debug = debug
 
-    this.groupItemsKeys = new Cachable(groupKey, null, new Set<string>(), undefined, true)
+    this.groupItemsKeys = new Cachable(
+      groupKey, null, new Set<string>(), undefined, true,
+      (value: CachedItem<Set<string>>) => {
+        return JSON.stringify({
+          lastSaveMs: value.lastSaveMs,
+          value: [...value.value]
+        })
+      },
+      (value: string) => {
+        try {
+          const parsedValue: CachedItem<Set<string>> = JSON.parse(value)
+
+          return {
+            lastSaveMs: parsedValue.lastSaveMs,
+            value: new Set(parsedValue.value)
+          }
+        } catch (err) {
+          if (this.debug) console.log(err)
+    
+          return undefined
+        }
+      }
+    )
+
     this.items = {}
+
+    console.log('this.groupItemsKeys.value', typeof this.groupItemsKeys.value, this.groupItemsKeys.value)
 
     this.groupItemsKeys.value!.forEach(itemKey => {
       this.items[itemKey] = new Cachable<T>(itemKey, maxCacheAgeMs, undefined, this.didUnset, debug)

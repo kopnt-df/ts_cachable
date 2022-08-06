@@ -18,12 +18,18 @@ export class Cachable<T> {
     maxCacheAgeMs: number | null = 1000*60*60,
     defaultValue?: T,
     unsetCallback?: UnsetCallback,
-    debug: boolean = false
+    debug: boolean = false,
+
+    stringify?: (value: CachedItem<T>) => string,
+    parse?: (value: string) => CachedItem<T> | undefined
   ) {
     this.key = key
     this.maxCacheAgeMs = maxCacheAgeMs
     this.unsetCallback = unsetCallback
     this.debug = debug
+
+    this.stringify = stringify !== undefined ? stringify : this._stringify
+    this.parse = parse !== undefined ? parse : this._parse
 
     this.localStorageExists = typeof window !== 'undefined'
     this.localStorage = this.localStorageExists ? window.localStorage : null
@@ -67,6 +73,9 @@ export class Cachable<T> {
   private localStorageExists: boolean
   private localStorage: Storage | null
 
+  private stringify: (value: CachedItem<T>) => string
+  private parse: (value: string) => CachedItem<T> | undefined
+
 
   /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
 
@@ -79,7 +88,7 @@ export class Cachable<T> {
     if (this.localStorage !== null) {
       if (this.debug) console.log(`Saving value for key '${this.key}'`)
 
-      this.localStorage.setItem(this.key, JSON.stringify(this.cache))
+      this.localStorage.setItem(this.key, this.stringify(this.cache))
 
       return true
     }
@@ -113,13 +122,30 @@ export class Cachable<T> {
       let cacheStr = this.localStorage.getItem(this.key)
 
       if (typeof cacheStr === 'string') {
-        const _cache = JSON.parse(cacheStr)
-        this.cache = _cache != null ? _cache : undefined
+        this.cache = this.parse(cacheStr)
 
         return true
       }
     }
 
     return false
+  }
+
+  // Helpers
+
+  _parse: (value: string) => CachedItem<T> | undefined = (value: string) => {
+    try {
+      const parsedValue = JSON.parse(value)
+
+      return parsedValue != null ? parsedValue : undefined
+    } catch (err) {
+      if (this.debug) console.log(err)
+
+      return undefined
+    }
+  }
+
+  _stringify: (value: CachedItem<T>) => string = (value: CachedItem<T>) => {
+    return JSON.stringify(value)
   }
 }
