@@ -1,24 +1,26 @@
 {
+    "name": "local_storage_cachable",
+    "author": "Kristóf-Attila Kovács",
+    "version": "0.0.19",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
         "prepare": "tsc",
         "build": "tsc",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "clean": "rm -rf node_modules && rm -rf dist && rm package-lock.json",
+        "clean_build": "npm run clean && npm install && npm run build"
     },
     "repository": {
         "type": "git",
         "url": "https://github.com/kopnt-df/ts_cachable"
     },
     "license": "ISC",
-    "dependencies": {
-        "@types/node": "^14.17.3",
-        "typescript": "^4.3.2"
-    },
     "publishConfig": {
         "access": "public"
     },
-    "author": "Kristóf-Attila Kovács",
-    "name": "local_storage_cachable",
-    "version": "0.0.18"
+    "dependencies": {
+        "@types/node": "^14.17.3",
+        "typescript": "^4.3.2"
+    }
 }

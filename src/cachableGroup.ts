@@ -23,37 +23,14 @@ export class CachableGroup<T> {
     this.maxCacheAgeMs = maxCacheAgeMs
     this.debug = debug
 
-    this.groupItemsKeys = new Cachable(
-      groupKey, null, new Set<string>(), undefined, true,
-      (value: CachedItem<Set<string>>) => {
-        return JSON.stringify({
-          lastSaveMs: value.lastSaveMs,
-          value: [...value.value]
-        })
-      },
-      (value: string) => {
-        try {
-          const parsedValue: CachedItem<Set<string>> = JSON.parse(value)
-
-          return {
-            lastSaveMs: parsedValue.lastSaveMs,
-            value: new Set(parsedValue.value)
-          }
-        } catch (err) {
-          if (this.debug) console.log(err)
-    
-          return undefined
-        }
-      }
-    )
-
+    this.groupItemsKeys = new Cachable(groupKey, null, {}, undefined, true)
     this.items = {}
 
     console.log('this.groupItemsKeys.value', typeof this.groupItemsKeys.value, this.groupItemsKeys.value)
 
-    this.groupItemsKeys.value!.forEach(itemKey => {
+    for(let itemKey of Object.keys(this.groupItemsKeys)) {
       this.items[itemKey] = new Cachable<T>(itemKey, maxCacheAgeMs, undefined, this.didUnset, debug)
-    })
+    }
   }
 
 
@@ -67,7 +44,7 @@ export class CachableGroup<T> {
   private maxCacheAgeMs: number
   private debug: boolean
 
-  private groupItemsKeys: Cachable<Set<string>>
+  private groupItemsKeys: Cachable<{[key: string]: boolean}>
   private items: {
     [key: string]: Cachable<T>
   }
@@ -93,22 +70,17 @@ export class CachableGroup<T> {
 
     const itemCacheKey = this.itemCacheKey(key)
 
-    if (this.groupItemsKeys.value!.has(itemCacheKey)) {
+    if (this.groupItemsKeys.value![itemCacheKey] === true) {
       this.items[itemCacheKey].set(value)
     } else {
       this.items[itemCacheKey] = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this.didUnset, this.debug)
-      this.groupItemsKeys.value!.add(itemCacheKey)
+      this.groupItemsKeys.value![itemCacheKey] = true
       this.groupItemsKeys.set(this.groupItemsKeys.value!)
     }
   }
 
   deleteItem(key: string) {
-    const itemCacheKey = this.itemCacheKey(key)
-
-    if (this.groupItemsKeys.value!.delete(itemCacheKey)) {
-      this.groupItemsKeys.set(this.groupItemsKeys.value!)
-      delete this.items[itemCacheKey]
-    }
+    this._deleteItem(this.itemCacheKey(key))
   }
 
 
@@ -119,9 +91,14 @@ export class CachableGroup<T> {
   }
 
   private didUnset(itemCacheKey: string) {
-    this.groupItemsKeys.value!.delete(itemCacheKey)
-    this.groupItemsKeys.set(this.groupItemsKeys.value!)
+    this._deleteItem(itemCacheKey)
+  }
 
-    delete this.items[itemCacheKey]
+  private _deleteItem(itemCacheKey: string) {
+    if (this.groupItemsKeys.value![itemCacheKey] === true) {
+      delete this.groupItemsKeys.value![itemCacheKey]
+      this.groupItemsKeys.set(this.groupItemsKeys.value!)
+      delete this.items[itemCacheKey]
+    }
   }
 }
