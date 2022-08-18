@@ -23,12 +23,12 @@ export class CachableGroup<T> {
     this.maxCacheAgeMs = maxCacheAgeMs
     this.debug = debug
 
-    this.groupItemsKeys = new Cachable(groupKey, null, {}, undefined, true)
+    // this.groupItemsKeys = new Cachable(groupKey, null, {}, undefined, true)
     this.items = {}
 
-    for(let itemKey of Object.keys(this.groupItemsKeys.value)) {
-      this.items[itemKey] = new Cachable<T>(itemKey, maxCacheAgeMs, undefined, this.didUnset, debug)
-    }
+    // for(let itemKey of Object.keys(this.groupItemsKeys.value)) {
+    //   this.items[itemKey] = new Cachable<T>(itemKey, maxCacheAgeMs, undefined, this.didUnset, debug)
+    // }
   }
 
 
@@ -42,7 +42,7 @@ export class CachableGroup<T> {
   private maxCacheAgeMs: number
   private debug: boolean
 
-  private groupItemsKeys: Cachable<{[key: string]: boolean}>
+  // private groupItemsKeys: Cachable<{[key: string]: boolean}>
   private items: {
     [key: string]: Cachable<T>
   }
@@ -51,9 +51,15 @@ export class CachableGroup<T> {
   /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
 
   getItem(key: string): T | undefined {
-    const itemCache = this.items[this.itemCacheKey(key)]
+    const itemCacheKey = this.itemCacheKey(key)
+    var itemCache = this.items[this.itemCacheKey(key)]
 
-    return itemCache !== undefined && itemCache.value !== undefined ? itemCache.value : undefined
+    if (itemCache === undefined) {
+      itemCache = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this.didUnset, this.debug)
+      this.items[this.itemCacheKey(key)] = itemCache
+    }
+
+    return itemCache.value
   }
 
   setItem(
@@ -67,11 +73,6 @@ export class CachableGroup<T> {
     }
 
     const itemCacheKey = this.itemCacheKey(key)
-
-    if (this.groupItemsKeys.value![itemCacheKey] !== true) {
-      this.groupItemsKeys.value![itemCacheKey] = true
-      this.groupItemsKeys.set(this.groupItemsKeys.value!)
-    }
 
     if (this.items[itemCacheKey] === undefined) {
       this.items[itemCacheKey] = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this.didUnset, this.debug)
@@ -96,10 +97,6 @@ export class CachableGroup<T> {
   }
 
   private _deleteItem(itemCacheKey: string) {
-    if (this.groupItemsKeys.value![itemCacheKey] === true) {
-      delete this.groupItemsKeys.value![itemCacheKey]
-      this.groupItemsKeys.set(this.groupItemsKeys.value!)
-      delete this.items[itemCacheKey]
-    }
+    delete this.items[itemCacheKey]
   }
 }
