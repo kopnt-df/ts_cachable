@@ -26,9 +26,7 @@ export class CachableGroup<T> {
     this.groupItemsKeys = new Cachable(groupKey, null, {}, undefined, true)
     this.items = {}
 
-    console.log('this.groupItemsKeys.value', typeof this.groupItemsKeys.value, this.groupItemsKeys.value)
-
-    for(let itemKey of Object.keys(this.groupItemsKeys)) {
+    for(let itemKey of Object.keys(this.groupItemsKeys.value)) {
       this.items[itemKey] = new Cachable<T>(itemKey, maxCacheAgeMs, undefined, this.didUnset, debug)
     }
   }
@@ -70,13 +68,16 @@ export class CachableGroup<T> {
 
     const itemCacheKey = this.itemCacheKey(key)
 
-    if (this.groupItemsKeys.value![itemCacheKey] === true) {
-      this.items[itemCacheKey].set(value)
-    } else {
-      this.items[itemCacheKey] = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this.didUnset, this.debug)
+    if (this.groupItemsKeys.value![itemCacheKey] !== true) {
       this.groupItemsKeys.value![itemCacheKey] = true
       this.groupItemsKeys.set(this.groupItemsKeys.value!)
     }
+
+    if (this.items[itemCacheKey] === undefined) {
+      this.items[itemCacheKey] = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this.didUnset, this.debug)
+    }
+
+    this.items[itemCacheKey].set(value)
   }
 
   deleteItem(key: string) {
