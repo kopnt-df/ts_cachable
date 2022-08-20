@@ -93,6 +93,9 @@ export class CachableGroup<T> {
   }
 
   private didUnset(itemCacheKey: string) {
+    console.log('itemCacheKey', itemCacheKey)
+    console.log('this', this)
+    console.log('this._deleteItem', this._deleteItem)
     this._deleteItem(itemCacheKey)
   }
 
