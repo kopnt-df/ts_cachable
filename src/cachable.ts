@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------ Imports ----------------------------------------------------------- */
 
 // Local
-import { CachedItem, UnsetCallback } from './types'
+import { CachedItem, IUnsetCallback } from './types'
 
 /* -------------------------------------------------------------------------------------------------------------------------------- */
 
@@ -17,7 +17,7 @@ export class Cachable<T> {
     key: string,
     maxCacheAgeMs: number | null = 1000*60*60,
     defaultValue?: T,
-    unsetCallback?: UnsetCallback,
+    unsetCallbackObj?: IUnsetCallback,
     debug: boolean = false,
 
     stringify?: (value: CachedItem<T>) => string,
@@ -25,7 +25,7 @@ export class Cachable<T> {
   ) {
     this.key = key
     this.maxCacheAgeMs = maxCacheAgeMs
-    this.unsetCallback = unsetCallback
+    this.unsetCallbackObj = unsetCallbackObj
     this.debug = debug
 
     this.stringify = stringify !== undefined ? stringify : this._stringify
@@ -61,7 +61,7 @@ export class Cachable<T> {
 
   maxCacheAgeMs: number | null
   debug: boolean
-  unsetCallback?: UnsetCallback
+  unsetCallbackObj?: IUnsetCallback
 
   get value() { return this.get() }
 
@@ -107,8 +107,7 @@ export class Cachable<T> {
 
       if (cacheAgeMs > this.maxCacheAgeMs) {
         if (this.debug) console.log(`Removing value for key '${this.key}' (Reason: too old (Age ms: '${cacheAgeMs}' > Age ms: '${this.maxCacheAgeMs}))`)
-
-        if (this.unsetCallback !== undefined) this.unsetCallback(this.key)
+        if (this.unsetCallbackObj !== undefined) this.unsetCallbackObj.unsetCallback(this.key)
 
         return true
       }

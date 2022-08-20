@@ -2,7 +2,7 @@
 
 // Local
 import { Cachable } from './cachable'
-import { CachedItem } from './types'
+import { IUnsetCallback } from './types'
 
 /* -------------------------------------------------------------------------------------------------------------------------------- */
 
@@ -10,7 +10,7 @@ import { CachedItem } from './types'
 
 /* ----------------------------------------------------- class: CachableGroup ---------------------------------------------------- */
 
-export class CachableGroup<T> {
+export class CachableGroup<T> implements IUnsetCallback {
 
   /* ------------------------------------------------------ Constructor ----------------------------------------------------- */
 
@@ -55,7 +55,7 @@ export class CachableGroup<T> {
     var itemCache = this.items[this.itemCacheKey(key)]
 
     if (itemCache === undefined) {
-      itemCache = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this.didUnset, this.debug)
+      itemCache = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this, this.debug)
       this.items[this.itemCacheKey(key)] = itemCache
     }
 
@@ -75,7 +75,7 @@ export class CachableGroup<T> {
     const itemCacheKey = this.itemCacheKey(key)
 
     if (this.items[itemCacheKey] === undefined) {
-      this.items[itemCacheKey] = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this.didUnset, this.debug)
+      this.items[itemCacheKey] = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this, this.debug)
     }
 
     this.items[itemCacheKey].set(value)
@@ -92,7 +92,7 @@ export class CachableGroup<T> {
     return `${this.groupKey}-${itemKey.toLowerCase()}`
   }
 
-  private didUnset(itemCacheKey: string) {
+  unsetCallback(itemCacheKey: string) {
     console.log('itemCacheKey', itemCacheKey)
     console.log('this', this)
     console.log('this._deleteItem', this._deleteItem)
