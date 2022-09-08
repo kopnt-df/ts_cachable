@@ -85,17 +85,13 @@ export class CachableGroup<T> implements IUnsetCallback {
     this._deleteItem(this.itemCacheKey(key))
   }
 
-
-  /* ---------------------------------------------------- Private methods --------------------------------------------------- */
-
-  private itemCacheKey(itemKey: string) {
+  itemCacheKey(itemKey: string) {
     return `${this.groupKey}-${itemKey.toLowerCase()}`
   }
 
+  /* ---------------------------------------------------- Private methods --------------------------------------------------- */
+
   unsetCallback(itemCacheKey: string) {
-    console.log('itemCacheKey', itemCacheKey)
-    console.log('this', this)
-    console.log('this._deleteItem', this._deleteItem)
     this._deleteItem(itemCacheKey)
   }
 
