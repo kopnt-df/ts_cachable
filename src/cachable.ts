@@ -79,7 +79,7 @@ export class Cachable<T> {
 
   /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
 
-  set(value: T): boolean {
+  set(value?: T | undefined | null): boolean {
     this.cache = {
       lastSaveMs: Date.now(),
       value: value
@@ -88,7 +88,8 @@ export class Cachable<T> {
     if (this.localStorage !== null) {
       if (this.debug) console.log(`Saving value for key '${this.key}'`)
 
-      this.localStorage.setItem(this.key, this.stringify(this.cache))
+      if (value != null) this.localStorage.setItem(this.key, this.stringify(this.cache))
+      else this.localStorage.removeItem(this.key)
 
       return true
     }
