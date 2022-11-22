@@ -6,6 +6,8 @@ import { CachedItem, IUnsetCallback } from './types'
 /* -------------------------------------------------------------------------------------------------------------------------------- */
 
 
+const OBFUSCATION_N = 128
+
 
 /* ------------------------------------------------------- class: Cachable ------------------------------------------------------- */
 
@@ -21,12 +23,14 @@ export class Cachable<T> {
     debug: boolean = false,
 
     stringify?: (value: CachedItem<T>) => string,
-    parse?: (value: string) => CachedItem<T> | undefined
+    parse?: (value: string) => CachedItem<T> | undefined,
+    obfuscationKey?: number // 0 - (OBFUSCATION_N-1)
   ) {
     this.key = key
     this.maxCacheAgeMs = maxCacheAgeMs
     this.unsetCallbackObj = unsetCallbackObj
     this.debug = debug
+    this.obfuscationKey = obfuscationKey
 
     this.stringify = stringify !== undefined ? stringify : this._stringify
     this.parse = parse !== undefined ? parse : this._parse
@@ -58,6 +62,7 @@ export class Cachable<T> {
 
   readonly localStorageSupported: boolean
   readonly key: string
+  readonly obfuscationKey: number | undefined
 
   maxCacheAgeMs: number | null
   debug: boolean
@@ -88,8 +93,14 @@ export class Cachable<T> {
     if (this.localStorage !== null) {
       if (this.debug) console.log(`Saving value for key '${this.key}'`)
 
-      if (value != null) this.localStorage.setItem(this.key, this.stringify(this.cache))
-      else this.localStorage.removeItem(this.key)
+      if (value != null) {
+        var cacheStr = this.stringify(this.cache)
+        if (this.obfuscationKey !== undefined && this.obfuscationKey < 0 && this.obfuscationKey < OBFUSCATION_N) {
+          cacheStr = obfs(btoa(cacheStr), this.obfuscationKey, OBFUSCATION_N)
+        }
+
+        this.localStorage.setItem(this.key, cacheStr)
+      } else this.localStorage.removeItem(this.key)
 
       return true
     }
@@ -119,9 +130,13 @@ export class Cachable<T> {
 
   private load (): boolean {
     if (this.localStorage != null) {
-      let cacheStr = this.localStorage.getItem(this.key)
+      var cacheStr = this.localStorage.getItem(this.key)
 
       if (typeof cacheStr === 'string') {
+        if (this.obfuscationKey !== undefined && this.obfuscationKey < 0 && this.obfuscationKey < OBFUSCATION_N) {
+          cacheStr = atob(defs(cacheStr, this.obfuscationKey, OBFUSCATION_N))
+        }
+
         this.cache = this.parse(cacheStr)
 
         return true
@@ -148,4 +163,39 @@ export class Cachable<T> {
   _stringify: (value: CachedItem<T>) => string = (value: CachedItem<T>) => {
     return JSON.stringify(value)
   }
+}
+
+
+function obfs(
+  str: string,
+  key: number,
+  n:   number = 126
+) {
+  if (!(typeof key === 'number' && key % 1 === 0)) {
+    return str
+  }
+
+  var chars = str.split('')
+
+  for (var i = 0; i < chars.length; i++) {
+    var c = chars[i].charCodeAt(0)
+
+    if (c <= n) {
+      chars[i] = String.fromCharCode((c + key) % n)
+    }
+  }
+
+  return chars.join('')
+}
+
+function defs(
+  str: string,
+  key: number,
+  n:   number = 126
+) {
+  if (!(typeof key === 'number' && key % 1 === 0)) {
+    return str
+  }
+
+  return obfs(str, n - key, n)
 }
