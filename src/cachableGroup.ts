@@ -39,12 +39,11 @@ export class CachableGroup<T> implements IUnsetCallback {
   readonly groupKey: string
   readonly stringify: ((value: CachedItem<T>) => string) | undefined
   readonly parse: ((value: string) => CachedItem<T> | undefined) | undefined
-
+  readonly maxCacheAgeMs: number
+  readonly debug: boolean
 
   /* -------------------------------------------------- Private properties -------------------------------------------------- */
 
-  private maxCacheAgeMs: number
-  private debug: boolean
   private obfuscationKey: number | undefined
 
   // private groupItemsKeys: Cachable<{[key: string]: boolean}>
@@ -54,6 +53,12 @@ export class CachableGroup<T> implements IUnsetCallback {
 
 
   /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
+
+  reload() {
+    for (const cacheKey of Object.keys(this.items)) {
+      this.items[cacheKey].load()
+    }
+  }
 
   getItem(key: string): T | undefined {
     const itemCacheKey = this.itemCacheKey(key)

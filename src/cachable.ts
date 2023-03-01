@@ -110,6 +110,24 @@ export class Cachable<T> {
 
   get(): T | undefined { return this.cache !== undefined && !this.unsetIfNeeded() ? this.cache.value : undefined }
 
+  load (): boolean {
+    if (this.localStorage != null) {
+      var cacheStr = this.localStorage.getItem(this.key)
+
+      if (typeof cacheStr === 'string') {
+        if (this.obfuscationKey !== undefined && this.obfuscationKey < 0 && this.obfuscationKey < OBFUSCATION_N) {
+          cacheStr = atob(defs(cacheStr, this.obfuscationKey, OBFUSCATION_N))
+        }
+
+        this.cache = this.parse(cacheStr)
+
+        return true
+      }
+    }
+
+    return false
+  }
+
 
   /* ---------------------------------------------------- Private methods --------------------------------------------------- */
 
@@ -120,24 +138,6 @@ export class Cachable<T> {
       if (cacheAgeMs > this.maxCacheAgeMs) {
         if (this.debug) console.log(`Removing value for key '${this.key}' (Reason: too old (Age ms: '${cacheAgeMs}' > Age ms: '${this.maxCacheAgeMs}))`)
         if (this.unsetCallbackObj !== undefined) this.unsetCallbackObj.unsetCallback(this.key)
-
-        return true
-      }
-    }
-
-    return false
-  }
-
-  private load (): boolean {
-    if (this.localStorage != null) {
-      var cacheStr = this.localStorage.getItem(this.key)
-
-      if (typeof cacheStr === 'string') {
-        if (this.obfuscationKey !== undefined && this.obfuscationKey < 0 && this.obfuscationKey < OBFUSCATION_N) {
-          cacheStr = atob(defs(cacheStr, this.obfuscationKey, OBFUSCATION_N))
-        }
-
-        this.cache = this.parse(cacheStr)
 
         return true
       }
