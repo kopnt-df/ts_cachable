@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------ Imports ----------------------------------------------------------- */
 
 // Local
-import { CachedItem, IUnsetCallback } from './types'
+import { CachedItem, UnsetCallback } from './types'
 
 /* -------------------------------------------------------------------------------------------------------------------------------- */
 
@@ -13,22 +13,47 @@ const OBFUSCATION_N = 128
 
 export class Cachable<T> {
 
+  /* --------------------------------------------------- Public properties -------------------------------------------------- */
+
+  readonly localStorageSupported: boolean
+  readonly key: string
+  readonly obfuscationKey: number | undefined
+  readonly unsetOnExpire: boolean
+
+  maxCacheAgeMs: number | null
+  debug: boolean
+  unsetCallback?: UnsetCallback
+
+  get value() { return this.get() }
+
+
+  /* -------------------------------------------------- Private properties -------------------------------------------------- */
+
+  private localStorageExists: boolean
+  private localStorage: Storage | null
+  private cache?: CachedItem<T>
+
+  private stringify: (value: CachedItem<T>) => string
+  private parse: (value: string) => CachedItem<T> | undefined
+
+
   /* ------------------------------------------------------ Constructor ----------------------------------------------------- */
 
   constructor(
     key: string,
-    maxCacheAgeMs: number | null = 1000*60*60,
+    maxCacheAgeMs: number | undefined | null = 1000*60*60,
     defaultValue?: T,
-    unsetCallbackObj?: IUnsetCallback,
+    unsetCallback?: UnsetCallback,
     debug: boolean = false,
 
     stringify?: (value: CachedItem<T>) => string,
     parse?: (value: string) => CachedItem<T> | undefined,
-    obfuscationKey?: number // 0 - (OBFUSCATION_N-1)
+    obfuscationKey?: number, // 0 - (OBFUSCATION_N-1)
+    unsetOnExpire: boolean = true
   ) {
     this.key = key
     this.maxCacheAgeMs = maxCacheAgeMs
-    this.unsetCallbackObj = unsetCallbackObj
+    this.unsetCallback = unsetCallback
     this.debug = debug
     this.obfuscationKey = obfuscationKey
 
@@ -39,6 +64,8 @@ export class Cachable<T> {
     this.localStorage = this.localStorageExists ? window.localStorage : null
     this.localStorageSupported = this.localStorageExists && this.localStorage != null
 
+    this.unsetOnExpire = unsetOnExpire
+
     if (debug) console.log(`Local storage supported: ${this.localStorageSupported}`)
     var hasValue = true
 
@@ -46,8 +73,11 @@ export class Cachable<T> {
       hasValue = false
 
       if (debug) console.log(`Could not load value for key '${key}' on init`)
-    } else if (this.unsetIfNeeded()) {
-      hasValue = false
+    } else if (this.isExpired() && this.unsetOnExpire) {
+      this.localStorage.removeItem(this.key)
+      this.cache = undefined
+
+      if (this.unsetCallback !== undefined) this.unsetCallback(this.key)
     }
 
     if (!hasValue && defaultValue !== undefined) {
@@ -58,39 +88,15 @@ export class Cachable<T> {
   }
 
 
-  /* --------------------------------------------------- Public properties -------------------------------------------------- */
-
-  readonly localStorageSupported: boolean
-  readonly key: string
-  readonly obfuscationKey: number | undefined
-
-  maxCacheAgeMs: number | null
-  debug: boolean
-  unsetCallbackObj?: IUnsetCallback
-
-  get value() { return this.get() }
-
-
-  /* -------------------------------------------------- Private properties -------------------------------------------------- */
-
-  private cache?: CachedItem<T>
-
-  private localStorageExists: boolean
-  private localStorage: Storage | null
-
-  private stringify: (value: CachedItem<T>) => string
-  private parse: (value: string) => CachedItem<T> | undefined
-
-
   /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
 
   set(value?: T | undefined | null): boolean {
-    this.cache = {
-      lastSaveMs: Date.now(),
-      value: value
-    }
-
     if (this.localStorage !== null) {
+      this.cache = {
+        lastSaveMs: Date.now(),
+        value: value
+      }
+
       if (this.debug) console.log(`Saving value for key '${this.key}'`)
 
       if (value != null) {
@@ -100,7 +106,10 @@ export class Cachable<T> {
         }
 
         this.localStorage.setItem(this.key, cacheStr)
-      } else this.localStorage.removeItem(this.key)
+      } else {
+        this.localStorage.removeItem(this.key)
+        this.cache = undefined
+      }
 
       return true
     }
@@ -108,7 +117,18 @@ export class Cachable<T> {
     return false
   }
 
-  get(): T | undefined { return this.cache !== undefined && !this.unsetIfNeeded() ? this.cache.value : undefined }
+  get(): T | undefined {
+    if (this.cache === undefined) return undefined
+
+    if (this.isExpired() && this.unsetOnExpire) {
+      this.localStorage.removeItem(this.key)
+      this.cache = undefined
+
+      if (this.unsetCallback !== undefined) this.unsetCallback(this.key)
+    }
+
+    return this.cache.value
+  }
 
   load (): boolean {
     if (this.localStorage != null) {
@@ -128,23 +148,19 @@ export class Cachable<T> {
     return false
   }
 
+  cacheAgeMs(): number {
+    return Date.now() - this.cache.lastSaveMs
+  }
+
+  isExpired(): boolean {
+    if (this.cache === undefined) return false
+    if (this.maxCacheAgeMs == null) return false
+
+    return Date.now() - this.cache.lastSaveMs > this.maxCacheAgeMs
+  }
+
 
   /* ---------------------------------------------------- Private methods --------------------------------------------------- */
-
-  private unsetIfNeeded(): boolean {
-    if (this.cache !== undefined && this.maxCacheAgeMs != null) {
-      const cacheAgeMs = Date.now() - this.cache.lastSaveMs
-
-      if (cacheAgeMs > this.maxCacheAgeMs) {
-        if (this.debug) console.log(`Removing value for key '${this.key}' (Reason: too old (Age ms: '${cacheAgeMs}' > Age ms: '${this.maxCacheAgeMs}))`)
-        if (this.unsetCallbackObj !== undefined) this.unsetCallbackObj.unsetCallback(this.key)
-
-        return true
-      }
-    }
-
-    return false
-  }
 
   // Helpers
 

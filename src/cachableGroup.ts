@@ -2,7 +2,7 @@
 
 // Local
 import { Cachable } from './cachable'
-import { CachedItem, IUnsetCallback } from './types'
+import { CachedItem } from './types'
 
 /* -------------------------------------------------------------------------------------------------------------------------------- */
 
@@ -10,29 +10,7 @@ import { CachedItem, IUnsetCallback } from './types'
 
 /* ----------------------------------------------------- class: CachableGroup ---------------------------------------------------- */
 
-export class CachableGroup<T> implements IUnsetCallback {
-
-  /* ------------------------------------------------------ Constructor ----------------------------------------------------- */
-
-  constructor(
-    groupKey: string,
-    maxCacheAgeMs: number = 1000*60*60,
-    debug: boolean = false,
-
-    stringify?: (value: CachedItem<T>) => string,
-    parse?: (value: string) => CachedItem<T> | undefined,
-    obfuscationKey?: number // 0 - (OBFUSCATION_N-1)
-  ) {
-    this.groupKey = groupKey.toLowerCase()
-    this.maxCacheAgeMs = maxCacheAgeMs
-    this.debug = debug
-    this.obfuscationKey = obfuscationKey
-    this.items = {}
-
-    this.stringify = stringify
-    this.parse = parse
-  }
-
+export class CachableGroup<T> {
 
   /* --------------------------------------------------- Public properties -------------------------------------------------- */
 
@@ -41,6 +19,8 @@ export class CachableGroup<T> implements IUnsetCallback {
   readonly parse: ((value: string) => CachedItem<T> | undefined) | undefined
   readonly maxCacheAgeMs: number
   readonly debug: boolean
+  readonly unsetOnExpire: boolean
+
 
   /* -------------------------------------------------- Private properties -------------------------------------------------- */
 
@@ -52,6 +32,31 @@ export class CachableGroup<T> implements IUnsetCallback {
   }
 
 
+  /* ------------------------------------------------------ Constructor ----------------------------------------------------- */
+
+  constructor(
+    groupKey: string,
+    maxCacheAgeMs: number = 1000*60*60,
+    debug: boolean = false,
+
+    stringify?: (value: CachedItem<T>) => string,
+    parse?: (value: string) => CachedItem<T> | undefined,
+    obfuscationKey?: number, // 0 - (OBFUSCATION_N-1)
+    unsetOnExpire: boolean = true
+  ) {
+    this.groupKey = groupKey.toLowerCase()
+    this.maxCacheAgeMs = maxCacheAgeMs
+    this.debug = debug
+    this.obfuscationKey = obfuscationKey
+    this.items = {}
+
+    this.stringify = stringify
+    this.parse = parse
+
+    this.unsetOnExpire = unsetOnExpire
+  }
+
+
   /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
 
   reload() {
@@ -60,13 +65,17 @@ export class CachableGroup<T> implements IUnsetCallback {
     }
   }
 
+  isExpired(key: string): boolean {
+    return this.items[this.itemCacheKey(key)]?.isExpired()
+  }
+
   getItem(key: string): T | undefined {
     const itemCacheKey = this.itemCacheKey(key)
-    var itemCache = this.items[this.itemCacheKey(key)]
+    var itemCache = this.items[itemCacheKey]
 
     if (itemCache === undefined) {
-      itemCache = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this, this.debug, this.stringify, this.parse, this.obfuscationKey)
-      this.items[this.itemCacheKey(key)] = itemCache
+      itemCache = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, (key: string) => { delete this.items[key] }, this.debug, this.stringify, this.parse, this.obfuscationKey, this.unsetOnExpire)
+      this.items[itemCacheKey] = itemCache
     }
 
     return itemCache.value
@@ -85,27 +94,17 @@ export class CachableGroup<T> implements IUnsetCallback {
     const itemCacheKey = this.itemCacheKey(key)
 
     if (this.items[itemCacheKey] === undefined) {
-      this.items[itemCacheKey] = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, this, this.debug, this.stringify, this.parse, this.obfuscationKey)
+      this.items[itemCacheKey] = new Cachable<T>(itemCacheKey, this.maxCacheAgeMs, undefined, (key: string) => { delete this.items[key] }, this.debug, this.stringify, this.parse, this.obfuscationKey, this.unsetOnExpire)
     }
 
     this.items[itemCacheKey].set(value)
   }
 
   deleteItem(key: string) {
-    this._deleteItem(this.itemCacheKey(key))
+    delete this.items[this.itemCacheKey(key)]
   }
 
   itemCacheKey(itemKey: string) {
     return `${this.groupKey}-${itemKey.toLowerCase()}`
-  }
-
-  /* ---------------------------------------------------- Private methods --------------------------------------------------- */
-
-  unsetCallback(itemCacheKey: string) {
-    this._deleteItem(itemCacheKey)
-  }
-
-  private _deleteItem(itemCacheKey: string) {
-    delete this.items[itemCacheKey]
   }
 }
