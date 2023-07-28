@@ -1,7 +1,7 @@
 {
     "name": "local_storage_cachable",
     "author": "Kristóf-Attila Kovács",
-    "version": "0.0.31",
+    "version": "0.0.33",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
@@ -9,7 +9,10 @@
         "build": "tsc",
         "test": "echo \"Error: no test specified\" && exit 1",
         "clean": "rm -rf node_modules && rm -rf dist && rm package-lock.json",
-        "clean_build": "npm run clean && npm install && npm run build"
+        "clean_build": "npm run clean && npm install && npm run build",
+        "push": "git add . && git commit -m 'Update' && git push",
+        "versionbump": "npm version patch --force",
+        "publish": "npm run versionbump && npm run clean_build && npm run push && npm publish"
     },
     "repository": {
         "type": "git",
