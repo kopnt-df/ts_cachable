@@ -91,30 +91,29 @@ export class Cachable<T> {
   /* ---------------------------------------------------- Public methods ---------------------------------------------------- */
 
   set(value?: T | undefined | null): boolean {
-    if (this.localStorage !== null) {
+    if (value != null) {
       this.cache = {
         lastSaveMs: Date.now(),
         value: value
       }
 
-      if (this.debug) console.log(`Saving value for key '${this.key}'`)
-
-      if (value != null) {
+      if (this.localStorage !== null) {
         var cacheStr = this.stringify(this.cache)
         if (this.obfuscationKey !== undefined && this.obfuscationKey < 0 && this.obfuscationKey < OBFUSCATION_N) {
           cacheStr = obfs(btoa(cacheStr), this.obfuscationKey, OBFUSCATION_N)
         }
-
+  
         this.localStorage.setItem(this.key, cacheStr)
-      } else {
-        this.localStorage.removeItem(this.key)
-        this.cache = undefined
       }
+    } else {
+      this.cache = undefined
 
-      return true
+      if (this.localStorage !== null) {
+        this.localStorage.removeItem(this.key)
+      }
     }
 
-    return false
+    return true
   }
 
   get(): T | undefined {
@@ -130,7 +129,7 @@ export class Cachable<T> {
     return this.cache.value
   }
 
-  load (): boolean {
+  load(): boolean {
     if (this.localStorage != null) {
       var cacheStr = this.localStorage.getItem(this.key)
 
