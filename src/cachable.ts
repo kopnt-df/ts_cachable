@@ -124,6 +124,8 @@ export class Cachable<T> {
       this.cache = undefined
 
       if (this.unsetCallback !== undefined) this.unsetCallback(this.key)
+
+      return undefined
     }
 
     return this.cache.value
