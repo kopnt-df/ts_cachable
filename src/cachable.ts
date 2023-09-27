@@ -118,7 +118,7 @@ export class Cachable<T> {
     if (this.cache === undefined) return undefined
 
     if (this.isExpired() && this.unsetOnExpire) {
-      this.localStorage.removeItem(this.key)
+      if (this.localStorage !== null) this.localStorage.removeItem(this.key)
       this.cache = undefined
 
       if (this.unsetCallback !== undefined) this.unsetCallback(this.key)
