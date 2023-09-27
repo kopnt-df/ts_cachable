@@ -74,7 +74,7 @@ export class Cachable<T> {
 
       if (debug) console.log(`Could not load value for key '${key}' on init`)
     } else if (this.isExpired() && this.unsetOnExpire) {
-      this.localStorage.removeItem(this.key)
+      if (this.localStorage !== null) this.localStorage.removeItem(this.key)
       this.cache = undefined
 
       if (this.unsetCallback !== undefined) this.unsetCallback(this.key)
@@ -108,9 +108,7 @@ export class Cachable<T> {
     } else {
       this.cache = undefined
 
-      if (this.localStorage !== null) {
-        this.localStorage.removeItem(this.key)
-      }
+      if (this.localStorage !== null) this.localStorage.removeItem(this.key)
     }
 
     return true
